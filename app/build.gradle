@@ -2,10 +2,33 @@ plugins {
     id 'com.android.application'
 }
 
+// Read keystore properties
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace 'com.brouken.player'
     compileSdk 35
     ndkVersion '21.4.7075529'
+
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                storeFile rootProject.file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            } else {
+                // Fallback or error if keystore.properties is missing
+                // For now, let's allow building unsigned release if properties are missing
+                // but ideally, you'd want to make this mandatory.
+                println "Warning: keystore.properties not found. Release build will be unsigned."
+            }
+        }
+    }
 
     defaultConfig {
         def abiFilter = project.findProperty("abiFilter")
@@ -27,6 +50,7 @@ android {
         release {
             minifyEnabled false
             //proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release // Apply the release signing config
         }
     }
     flavorDimensions "targetSdk", "distribution"
@@ -60,7 +84,7 @@ android {
     applicationVariants.all { variant ->
         if (variant.buildType.name == "release" && variant.flavorName == "latestUniversal") {
             variant.outputs.all { output ->
-                output.outputFileName = "${archivesBaseName}.apk"
+                output.outputFileName = "${archivesBaseName}-long-press-2x-speed.apk"
             }
         }
         if (variant.buildType.name == "release" && variant.flavorName == "legacyUniversal") {

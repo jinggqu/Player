@@ -57,6 +57,8 @@ public class CustomPlayerView extends PlayerView implements GestureDetector.OnGe
     private float mScaleFactorFit;
     Rect systemGestureExclusionRect = new Rect();
 
+    private float originalSpeed = 1.0f;
+
     public final Runnable textClearRunnable = () -> {
         setCustomErrorMessage(null);
         clearIcon();
@@ -127,10 +129,20 @@ public class CustomPlayerView extends PlayerView implements GestureDetector.OnGe
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
                 if (handleTouch) {
+                    boolean wasLongPressHandledForSpeedChange = isHandledLongPress;
+
+                    if (wasLongPressHandledForSpeedChange && PlayerActivity.player != null) {
+                        PlayerActivity.player.setPlaybackSpeed(originalSpeed);
+                    }
+
                     if (gestureOrientation == Orientation.HORIZONTAL) {
                         setCustomErrorMessage(null);
                     } else {
-                        postDelayed(textClearRunnable, isHandledLongPress ? MESSAGE_TIMEOUT_LONG : MESSAGE_TIMEOUT_TOUCH);
+                        postDelayed(textClearRunnable, wasLongPressHandledForSpeedChange ? MESSAGE_TIMEOUT_LONG : MESSAGE_TIMEOUT_TOUCH);
+                    }
+
+                    if (wasLongPressHandledForSpeedChange) {
+                        isHandledLongPress = false;
                     }
 
                     if (restorePlayState) {
@@ -171,7 +183,7 @@ public class CustomPlayerView extends PlayerView implements GestureDetector.OnGe
     public void onShowPress(MotionEvent motionEvent) {
     }
 
-
+    
 
     @Override
     public boolean onSingleTapUp(MotionEvent motionEvent) {
@@ -292,15 +304,15 @@ public class CustomPlayerView extends PlayerView implements GestureDetector.OnGe
 
     @Override
     public void onLongPress(MotionEvent motionEvent) {
-        if (PlayerActivity.locked || (getPlayer() != null && getPlayer().isPlaying())) {
-            PlayerActivity.locked = !PlayerActivity.locked;
+        if (PlayerActivity.player != null && PlayerActivity.player.isPlaying() && !PlayerActivity.locked) {
             isHandledLongPress = true;
-            Utils.showText(this, "", MESSAGE_TIMEOUT_LONG);
-            setIconLock(PlayerActivity.locked);
-
-            if (PlayerActivity.locked && PlayerActivity.controllerVisible) {
-                hideController();
+            originalSpeed = PlayerActivity.player.getPlaybackParameters().speed;
+            
+            if (originalSpeed != 2.0f) {
+                PlayerActivity.player.setPlaybackSpeed(2.0f);
             }
+
+            Utils.showText(this, "2x", MESSAGE_TIMEOUT_TOUCH);
         }
     }
 
